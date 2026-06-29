@@ -1,6 +1,6 @@
-import { sqlite } from "./index";
+import { client } from "./index";
 
-sqlite.exec(`
+await client.executeMultiple(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -16,6 +16,7 @@ sqlite.exec(`
     title TEXT NOT NULL,
     excerpt TEXT NOT NULL,
     content TEXT NOT NULL,
+    image_url TEXT,
     status TEXT NOT NULL DEFAULT 'draft',
     read_time TEXT NOT NULL,
     published_at TEXT,
@@ -45,10 +46,8 @@ sqlite.exec(`
   );
 `);
 
-const articleColumns = sqlite
-  .prepare("PRAGMA table_info(articles)")
-  .all() as Array<{ name: string }>;
+const articleColumns = await client.execute("PRAGMA table_info(articles)");
 
-if (!articleColumns.some((column) => column.name === "image_url")) {
-  sqlite.exec("ALTER TABLE articles ADD COLUMN image_url TEXT;");
+if (!articleColumns.rows.some((column) => column.name === "image_url")) {
+  await client.execute("ALTER TABLE articles ADD COLUMN image_url TEXT;");
 }

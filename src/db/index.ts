@@ -1,14 +1,26 @@
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import { dirname, resolve } from "node:path";
+import "dotenv/config";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
 import { mkdirSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import * as schema from "./schema";
 
-const databasePath = resolve(process.env.DATABASE_URL ?? "db/blog.db");
+const defaultLocalDatabaseUrl = "file:db/blog.db";
+const databaseUrl =
+  process.env.TURSO_DATABASE_URL ??
+  process.env.DATABASE_URL ??
+  defaultLocalDatabaseUrl;
 
-mkdirSync(dirname(databasePath), { recursive: true });
+if (databaseUrl.startsWith("file:")) {
+  const databasePath = databaseUrl.replace(/^file:/, "") || "db/blog.db";
+  mkdirSync(dirname(resolve(databasePath)), { recursive: true });
+}
 
-export const sqlite = new Database(databasePath);
-sqlite.pragma("foreign_keys = ON");
+export const client = createClient({
+  url: databaseUrl,
+  authToken: process.env.TURSO_AUTH_TOKEN,
+});
 
-export const db = drizzle(sqlite, { schema });
+await client.execute("PRAGMA foreign_keys = ON");
+
+export const db = drizzle(client, { schema });

@@ -2,6 +2,8 @@ import "dotenv/config";
 import cors from "cors";
 import express from "express";
 import { desc, eq } from "drizzle-orm";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { db } from "../db";
 import "../db/migrate";
 import {
@@ -14,9 +16,11 @@ import type { Article } from "../types";
 
 const app = express();
 const port = Number(process.env.PORT ?? 3001);
+const distPath = resolve(process.cwd(), "dist");
+const indexHtmlPath = resolve(distPath, "index.html");
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "8mb" }));
 
 const slugify = (value: string) =>
   value
@@ -295,6 +299,14 @@ app.post("/api/articles", async (request, response, next) => {
   }
 });
 
+if (existsSync(indexHtmlPath)) {
+  app.use(express.static(distPath));
+
+  app.get(/^(?!\/api).*/, (_request, response) => {
+    response.sendFile(indexHtmlPath);
+  });
+}
+
 app.use(
   (
     error: unknown,
@@ -308,5 +320,5 @@ app.use(
 );
 
 app.listen(port, () => {
-  console.log(`API server listening on http://127.0.0.1:${port}`);
+  console.log(`Server listening on http://127.0.0.1:${port}`);
 });
